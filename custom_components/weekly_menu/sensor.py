@@ -32,6 +32,9 @@ async def async_setup_entry(
     # Create coordinator
     coordinator = WeeklyMenuCoordinator(hass, api_url, api_key, family_id)
     
+    # Start the coordinator
+    await coordinator.async_config_entry_first_refresh()
+    
     # Add sensors
     async_add_entities([
         WeeklyMenuTodaySensor(coordinator, "Today's Meal", "today_meal"),
@@ -60,10 +63,13 @@ class WeeklyMenuCoordinator(DataUpdateCoordinator):
         """Update data via API."""
         try:
             url = f"{self.api_url}?api_key={self.api_key}&family_id={self.family_id}"
+            _LOGGER.debug("Fetching data from: %s", url)
+            
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
                     if response.status == 200:
                         data = await response.json()
+                        _LOGGER.debug("Received data: %s", data)
                         if data.get("success"):
                             return data["data"]
                         else:
@@ -71,6 +77,7 @@ class WeeklyMenuCoordinator(DataUpdateCoordinator):
                     else:
                         raise UpdateFailed(f"HTTP {response.status}")
         except Exception as err:
+            _LOGGER.error("Error fetching Weekly Menu data: %s", err)
             raise UpdateFailed(f"Error fetching data: {err}")
 
 
