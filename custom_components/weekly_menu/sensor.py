@@ -35,12 +35,22 @@ async def async_setup_entry(
     # Start the coordinator
     await coordinator.async_config_entry_first_refresh()
     
-    # Add sensors
-    async_add_entities([
+    # Add sensors for each day of the week
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    entities = []
+    
+    # Add individual day sensors
+    for day in days:
+        entities.append(WeeklyMenuDaySensor(coordinator, day.capitalize(), day))
+    
+    # Add summary sensors
+    entities.extend([
         WeeklyMenuTodaySensor(coordinator, "Today's Meal", "today_meal"),
         WeeklyMenuTomorrowSensor(coordinator, "Tomorrow's Meal", "tomorrow_meal"),
         WeeklyMenuProgressSensor(coordinator, "Meal Planning Progress", "meal_progress"),
     ])
+    
+    async_add_entities(entities)
 
 
 class WeeklyMenuCoordinator(DataUpdateCoordinator):
@@ -119,6 +129,51 @@ class WeeklyMenuBaseSensor(SensorEntity):
         pass
 
 
+class WeeklyMenuDaySensor(WeeklyMenuBaseSensor):
+    """Sensor for individual day meals."""
+
+    def __init__(self, coordinator: WeeklyMenuCoordinator, name: str, day: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, f"{name}'s Meal", day)
+        self.day = day
+
+    def _update_from_data(self, data: dict[str, Any]) -> None:
+        """Update sensor from API data."""
+        weekly_menu = data.get("weekly_menu", [])
+        meal = "No meal planned"
+        
+        for item in weekly_menu:
+            if item.get("day", "").lower() == self.day.lower():
+                meal = item.get("dish", "No meal planned")
+                break
+        
+        self._attr_native_value = meal
+        self._attr_extra_state_attributes = {
+            "day": self.day.capitalize(),
+            "has_meal": meal != "No meal planned",
+            "last_updated": data.get("last_updated", "")
+        }
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        if self.coordinator.data:
+            self._update_from_data(self.coordinator.data)
+        return self._attr_native_value
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        if self.coordinator.data:
+            self._update_from_data(self.coordinator.data)
+        return self._attr_extra_state_attributes
+
+    @property
+    def icon(self):
+        """Return the icon of the sensor."""
+        return "mdi:food-variant"
+
+
 class WeeklyMenuTodaySensor(WeeklyMenuBaseSensor):
     """Sensor for today's meal."""
 
@@ -144,6 +199,11 @@ class WeeklyMenuTodaySensor(WeeklyMenuBaseSensor):
         if self.coordinator.data:
             self._update_from_data(self.coordinator.data)
         return self._attr_extra_state_attributes
+
+    @property
+    def icon(self):
+        """Return the icon of the sensor."""
+        return "mdi:food"
 
 
 class WeeklyMenuTomorrowSensor(WeeklyMenuBaseSensor):
@@ -171,6 +231,11 @@ class WeeklyMenuTomorrowSensor(WeeklyMenuBaseSensor):
         if self.coordinator.data:
             self._update_from_data(self.coordinator.data)
         return self._attr_extra_state_attributes
+
+    @property
+    def icon(self):
+        """Return the icon of the sensor."""
+        return "mdi:food-variant"
 
 
 class WeeklyMenuProgressSensor(WeeklyMenuBaseSensor):
@@ -202,4 +267,9 @@ class WeeklyMenuProgressSensor(WeeklyMenuBaseSensor):
         """Return the state attributes."""
         if self.coordinator.data:
             self._update_from_data(self.coordinator.data)
-        return self._attr_extra_state_attributes 
+        return self._attr_extra_state_attributes
+
+    @property
+    def icon(self):
+        """Return the icon of the sensor."""
+        return "mdi:chart-line" 

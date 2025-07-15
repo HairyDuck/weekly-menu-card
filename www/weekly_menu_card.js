@@ -2,270 +2,271 @@ class WeeklyMenuCard extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });
-        this._expanded = false;
-        this._data = null;
     }
 
     setConfig(config) {
         this.config = {
-            api_url: config.api_url || 'https://projects.lukedev.co.uk/menu/ha_api.php',
-            api_key: config.api_key,
-            family_id: config.family_id || 1,
-            title: config.title || 'Weekly Menu',
-            refresh_interval: config.refresh_interval || 300,
+            title: 'Weekly Menu',
+            show_progress: true,
+            show_today_tomorrow: true,
             ...config
         };
-        
         this.render();
-        this.loadData();
-        
-        // Auto-refresh
-        if (this.config.refresh_interval > 0) {
-            setInterval(() => this.loadData(), this.config.refresh_interval * 1000);
-        }
-    }
-
-    async loadData() {
-        try {
-            const url = `${this.config.api_url}?api_key=${this.config.api_key}&family_id=${this.config.family_id}`;
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.success) {
-                this._data = data.data;
-                this.render();
-            } else {
-                console.error('Failed to load menu data:', data.error);
-            }
-        } catch (error) {
-            console.error('Error loading menu data:', error);
-        }
     }
 
     render() {
-        if (!this._data) {
-            this.shadowRoot.innerHTML = this.getLoadingHTML();
-            return;
-        }
-
         this.shadowRoot.innerHTML = `
             <style>
                 :host {
                     display: block;
-                    font-family: var(--ha-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
                 }
                 
-                .card {
-                    background: var(--ha-card-background, #ffffff);
+                .weekly-menu-card {
+                    background: var(--ha-card-background, #fff);
                     border-radius: 12px;
                     padding: 16px;
-                    box-shadow: var(--ha-card-box-shadow, 0 2px 4px rgba(0,0,0,0.1));
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    border: 1px solid var(--ha-card-border-color, #e0e0e0);
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    font-family: var(--mdc-typography-font-family, Roboto, sans-serif);
                 }
                 
-                .card:hover {
-                    box-shadow: var(--ha-card-box-shadow-hover, 0 4px 8px rgba(0,0,0,0.15));
-                    transform: translateY(-1px);
-                }
-                
-                .header {
+                .card-header {
                     display: flex;
                     align-items: center;
-                    justify-content: space-between;
-                    margin-bottom: 12px;
+                    margin-bottom: 16px;
+                    padding-bottom: 12px;
+                    border-bottom: 1px solid var(--divider-color, #e0e0e0);
                 }
                 
-                .title {
+                .card-title {
                     font-size: 18px;
-                    font-weight: 600;
-                    color: var(--primary-text-color, #000000);
+                    font-weight: 500;
+                    color: var(--primary-text-color, #212121);
                     margin: 0;
+                    flex-grow: 1;
                 }
                 
-                .icon {
-                    font-size: 20px;
-                    color: var(--primary-color, #03a9f4);
+                .progress-indicator {
+                    background: var(--accent-color, #03dac6);
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-size: 12px;
+                    font-weight: 500;
                 }
                 
-                .today-meal {
-                    background: linear-gradient(135deg, var(--primary-color, #03a9f4), var(--accent-color, #ff9800));
+                .today-tomorrow-section {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 12px;
+                    margin-bottom: 20px;
+                }
+                
+                .today-card, .tomorrow-card {
+                    background: linear-gradient(135deg, var(--accent-color, #03dac6), var(--primary-color, #2196f3));
                     color: white;
                     padding: 16px;
-                    border-radius: 8px;
-                    margin-bottom: 12px;
+                    border-radius: 12px;
                     text-align: center;
                 }
                 
-                .today-label {
+                .today-card {
+                    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+                }
+                
+                .tomorrow-card {
+                    background: linear-gradient(135deg, #4ecdc4, #44a08d);
+                }
+                
+                .day-label {
                     font-size: 12px;
                     opacity: 0.9;
                     margin-bottom: 4px;
+                }
+                
+                .meal-text {
+                    font-size: 16px;
+                    font-weight: 600;
+                    margin: 0;
+                    word-break: break-word;
+                }
+                
+                .weekly-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                    gap: 12px;
+                }
+                
+                .day-card {
+                    background: var(--ha-card-background, #fff);
+                    border: 2px solid var(--divider-color, #e0e0e0);
+                    border-radius: 12px;
+                    padding: 12px;
+                    text-align: center;
+                    transition: all 0.3s ease;
+                    cursor: pointer;
+                }
+                
+                .day-card:hover {
+                    border-color: var(--accent-color, #03dac6);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                }
+                
+                .day-card.has-meal {
+                    border-color: var(--accent-color, #03dac6);
+                    background: linear-gradient(135deg, rgba(3, 218, 198, 0.1), rgba(33, 150, 243, 0.1));
+                }
+                
+                .day-name {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: var(--primary-text-color, #212121);
+                    margin-bottom: 8px;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                 }
                 
-                .meal-text {
-                    font-size: 20px;
-                    font-weight: 600;
-                    margin: 0;
-                    word-wrap: break-word;
-                }
-                
-                .summary {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    font-size: 14px;
-                    color: var(--secondary-text-color, #666666);
-                }
-                
-                .progress {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                
-                .progress-bar {
-                    width: 60px;
-                    height: 6px;
-                    background: var(--disabled-text-color, #cccccc);
-                    border-radius: 3px;
-                    overflow: hidden;
-                }
-                
-                .progress-fill {
-                    height: 100%;
-                    background: var(--primary-color, #03a9f4);
-                    transition: width 0.3s ease;
-                }
-                
-                .weekly-menu {
-                    max-height: 0;
-                    overflow: hidden;
-                    transition: max-height 0.3s ease;
-                }
-                
-                .weekly-menu.expanded {
-                    max-height: 500px;
-                }
-                
-                .day-item {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 8px 0;
-                    border-bottom: 1px solid var(--divider-color, #e0e0e0);
-                }
-                
-                .day-item:last-child {
-                    border-bottom: none;
-                }
-                
-                .day-name {
-                    font-weight: 500;
-                    color: var(--primary-text-color, #000000);
-                    min-width: 80px;
-                }
-                
                 .day-meal {
-                    color: var(--secondary-text-color, #666666);
-                    text-align: right;
-                    flex: 1;
-                    margin-left: 12px;
+                    font-size: 13px;
+                    color: var(--secondary-text-color, #757575);
+                    margin: 0;
+                    line-height: 1.3;
+                    word-break: break-word;
                 }
                 
-                .day-meal.empty {
+                .day-meal.has-meal {
+                    color: var(--primary-text-color, #212121);
+                    font-weight: 500;
+                }
+                
+                .no-meal {
+                    color: var(--disabled-text-color, #bdbdbd);
                     font-style: italic;
-                    opacity: 0.6;
-                }
-                
-                .expand-icon {
-                    transition: transform 0.3s ease;
-                }
-                
-                .expand-icon.expanded {
-                    transform: rotate(180deg);
                 }
                 
                 .loading {
                     text-align: center;
                     padding: 20px;
-                    color: var(--secondary-text-color, #666666);
+                    color: var(--secondary-text-color, #757575);
                 }
                 
                 .error {
-                    color: var(--error-color, #f44336);
-                    text-align: center;
-                    padding: 20px;
+                    background: #ffebee;
+                    color: #c62828;
+                    padding: 12px;
+                    border-radius: 8px;
+                    margin: 8px 0;
+                }
+                
+                @media (max-width: 600px) {
+                    .weekly-grid {
+                        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                        gap: 8px;
+                    }
+                    
+                    .today-tomorrow-section {
+                        grid-template-columns: 1fr;
+                        gap: 8px;
+                    }
                 }
             </style>
             
-            <div class="card" @click="${this.toggleExpanded}">
-                <div class="header">
-                    <h3 class="title">${this.config.title}</h3>
-                    <div class="icon expand-icon ${this._expanded ? 'expanded' : ''}">
-                        ▼
-                    </div>
+            <ha-card class="weekly-menu-card">
+                <div class="card-header">
+                    <h2 class="card-title">${this.config.title}</h2>
+                    ${this.config.show_progress ? '<div class="progress-indicator" id="progress"></div>' : ''}
                 </div>
                 
-                <div class="today-meal">
-                    <div class="today-label">Today</div>
-                    <div class="meal-text">${this._data.today.meal}</div>
-                </div>
-                
-                <div class="summary">
-                    <div class="progress">
-                        <span>${this._data.summary.planned_meals}/${this._data.summary.total_days} planned</span>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${(this._data.summary.planned_meals / this._data.summary.total_days) * 100}%"></div>
+                ${this.config.show_today_tomorrow ? `
+                    <div class="today-tomorrow-section">
+                        <div class="today-card">
+                            <div class="day-label">Today</div>
+                            <p class="meal-text" id="today-meal">Loading...</p>
+                        </div>
+                        <div class="tomorrow-card">
+                            <div class="day-label">Tomorrow</div>
+                            <p class="meal-text" id="tomorrow-meal">Loading...</p>
                         </div>
                     </div>
-                </div>
+                ` : ''}
                 
-                <div class="weekly-menu ${this._expanded ? 'expanded' : ''}">
-                    ${this._data.weekly_menu.map(day => `
-                        <div class="day-item">
-                            <div class="day-name">${day.day}</div>
-                            <div class="day-meal ${!day.has_meal ? 'empty' : ''}">${day.dish}</div>
-                        </div>
-                    `).join('')}
+                <div class="weekly-grid" id="weekly-grid">
+                    <div class="loading">Loading weekly menu...</div>
                 </div>
-            </div>
+            </ha-card>
         `;
-    }
-
-    getLoadingHTML() {
-        return `
-            <style>
-                .loading {
-                    text-align: center;
-                    padding: 20px;
-                    color: var(--secondary-text-color, #666666);
-                }
-            </style>
-            <div class="loading">Loading menu...</div>
-        `;
-    }
-
-    toggleExpanded() {
-        this._expanded = !this._expanded;
-        this.render();
+        
+        this.updateContent();
     }
 
     set hass(hass) {
         this.hass = hass;
+        this.updateContent();
     }
 
-    static getStubConfig() {
-        return {
-            api_url: 'https://projects.lukedev.co.uk/menu/ha_api.php',
-            api_key: 'your-api-key-here',
-            family_id: 1,
-            title: 'Weekly Menu',
-            refresh_interval: 300
-        };
+    updateContent() {
+        if (!this.hass) return;
+        
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        
+        // Update progress
+        if (this.config.show_progress) {
+            const progressEntity = this.hass.states['sensor.meal_planning_progress'];
+            if (progressEntity) {
+                this.shadowRoot.getElementById('progress').textContent = progressEntity.state;
+            }
+        }
+        
+        // Update today/tomorrow
+        if (this.config.show_today_tomorrow) {
+            const todayEntity = this.hass.states['sensor.today_s_meal'];
+            const tomorrowEntity = this.hass.states['sensor.tomorrow_s_meal'];
+            
+            if (todayEntity) {
+                this.shadowRoot.getElementById('today-meal').textContent = todayEntity.state;
+            }
+            
+            if (tomorrowEntity) {
+                this.shadowRoot.getElementById('tomorrow-meal').textContent = tomorrowEntity.state;
+            }
+        }
+        
+        // Update weekly grid
+        const weeklyGrid = this.shadowRoot.getElementById('weekly-grid');
+        if (!weeklyGrid) return;
+        
+        let hasData = false;
+        let gridHTML = '';
+        
+        days.forEach(day => {
+            const entityId = `sensor.${day}_s_meal`;
+            const entity = this.hass.states[entityId];
+            
+            if (entity) {
+                hasData = true;
+                const meal = entity.state;
+                const hasMeal = meal !== 'No meal planned' && meal !== 'unknown';
+                const mealClass = hasMeal ? 'has-meal' : '';
+                const cardClass = hasMeal ? 'day-card has-meal' : 'day-card';
+                
+                gridHTML += `
+                    <div class="${cardClass}">
+                        <div class="day-name">${day.charAt(0).toUpperCase() + day.slice(1)}</div>
+                        <p class="day-meal ${mealClass}">${hasMeal ? meal : '<span class="no-meal">No meal planned</span>'}</p>
+                    </div>
+                `;
+            }
+        });
+        
+        if (hasData) {
+            weeklyGrid.innerHTML = gridHTML;
+        } else {
+            weeklyGrid.innerHTML = '<div class="loading">No menu data available</div>';
+        }
+    }
+
+    getCardSize() {
+        return 3;
     }
 }
 
