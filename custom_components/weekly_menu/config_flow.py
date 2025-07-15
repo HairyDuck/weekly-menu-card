@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import DOMAIN
+from .const import DOMAIN, DEFAULT_API_URL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,12 +29,14 @@ class WeeklyMenuConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="user",
                 data_schema=vol.Schema(
                     {
-                        vol.Required("api_url"): str,
                         vol.Required("api_key"): str,
-                        vol.Optional("family_id", default=1): int,
                     }
                 ),
             )
+
+        # Add the hard-coded values to the user input
+        user_input["api_url"] = DEFAULT_API_URL
+        user_input["family_id"] = 1
 
         return self.async_create_entry(
             title="Weekly Menu",
