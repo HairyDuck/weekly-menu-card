@@ -1,0 +1,152 @@
+# Home Assistant Configuration for Weekly Menu Integration
+# Add this to your configuration.yaml or create a separate file
+
+# RESTful sensor to fetch menu data
+sensor:
+  - platform: rest
+    name: "Today's Meal"
+    resource: "https://projects.lukedev.co.uk/menu/ha_api.php?api_key=your-secret-api-key-here&family_id=1"
+    value_template: "{{ value_json.data.today.meal }}"
+    json_attributes_path: "$.data"
+    json_attributes:
+      - weekly_menu
+      - today
+      - tomorrow
+      - summary
+      - last_updated
+    scan_interval: 300  # Update every 5 minutes
+
+  - platform: rest
+    name: "Tomorrow's Meal"
+    resource: "https://projects.lukedev.co.uk/menu/ha_api.php?api_key=your-secret-api-key-here&family_id=1"
+    value_template: "{{ value_json.data.tomorrow.meal }}"
+    scan_interval: 300
+
+  - platform: rest
+    name: "Meal Planning Progress"
+    resource: "https://projects.lukedev.co.uk/menu/ha_api.php?api_key=your-secret-api-key-here&family_id=1"
+    value_template: "{{ value_json.data.summary.planned_meals }}/{{ value_json.data.summary.total_days }}"
+    scan_interval: 300
+
+# Dashboard configuration (Lovelace)
+# Add this to your dashboard configuration
+
+views:
+  - title: "Kitchen Dashboard"
+    path: kitchen
+    type: custom:grid-layout
+    badges: []
+    cards:
+      # Today's meal card
+      - type: custom:mushroom-template-card
+        primary: "Today's Meal"
+        secondary: "{{ states('sensor.todays_meal') }}"
+        icon: mdi:food
+        layout: vertical
+        fill_container: false
+        grid:
+          column: 1
+          row: 1
+          width: 2
+          height: 2
+
+      # Tomorrow's meal card
+      - type: custom:mushroom-template-card
+        primary: "Tomorrow's Meal"
+        secondary: "{{ states('sensor.tomorrows_meal') }}"
+        icon: mdi:food-variant
+        layout: vertical
+        fill_container: false
+        grid:
+          column: 3
+          row: 1
+          width: 2
+          height: 2
+
+      # Weekly menu overview
+      - type: custom:mushroom-template-card
+        primary: "Weekly Menu"
+        secondary: "{{ states('sensor.meal_planning_progress') }} planned"
+        icon: mdi:calendar-week
+        layout: vertical
+        fill_container: false
+        grid:
+          column: 1
+          row: 3
+          width: 4
+          height: 2
+
+      # Quick access button to menu
+      - type: custom:mushroom-template-card
+        primary: "Edit Menu"
+        icon: mdi:pencil
+        layout: vertical
+        fill_container: false
+        tap_action:
+          action: url
+          url: "https://projects.lukedev.co.uk/menu"
+        grid:
+          column: 5
+          row: 1
+          width: 1
+          height: 1
+
+# Alternative: Simple cards without custom components
+# Add these to your dashboard if you don't have custom components
+
+cards:
+  # Today's meal (simple version)
+  - type: entities
+    title: "Today's Meal"
+    entities:
+      - entity: sensor.todays_meal
+        name: "{{ states('sensor.todays_meal') }}"
+        icon: mdi:food
+
+  # Tomorrow's meal (simple version)
+  - type: entities
+    title: "Tomorrow's Meal"
+    entities:
+      - entity: sensor.tomorrows_meal
+        name: "{{ states('sensor.tomorrows_meal') }}"
+        icon: mdi:food-variant
+
+  # Weekly overview (simple version)
+  - type: entities
+    title: "Weekly Menu Overview"
+    entities:
+      - entity: sensor.meal_planning_progress
+        name: "Planned Meals"
+        icon: mdi:calendar-check
+
+# Automation example: Notify when no meal is planned for today
+automation:
+  - alias: "No meal planned today"
+    trigger:
+      platform: time
+      at: "08:00:00"
+    condition:
+      - condition: template
+        value_template: "{{ states('sensor.todays_meal') == 'No meal planned' }}"
+    action:
+      - service: notify.mobile_app
+        data:
+          title: "Meal Planning Reminder"
+          message: "No meal is planned for today. Check your weekly menu!"
+
+# Script to open menu in browser
+script:
+  open_weekly_menu:
+    alias: "Open Weekly Menu"
+    sequence:
+      - service: browser_mod.navigate
+        data:
+          url: "https://projects.lukedev.co.uk/menu"
+
+# Example usage in a button card
+# - type: custom:button-card
+#   name: "Weekly Menu"
+#   icon: mdi:food
+#   tap_action:
+#     action: call-service
+#     service: script.open_weekly_menu 

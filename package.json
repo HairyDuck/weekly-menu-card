@@ -1,0 +1,29 @@
+{
+  "name": "weekly-menu-card",
+  "version": "1.0.0",
+  "description": "A beautiful, responsive card for Home Assistant that displays your weekly meal plan",
+  "main": "weekly_menu_card.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HairyDuck/weekly-menu-card.git"
+  },
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "card",
+    "menu",
+    "meal-planning",
+    "frontend"
+  ],
+  "author": "HairyDuck",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/HairyDuck/weekly-menu-card/issues"
+  },
+  "homepage": "https://github.com/HairyDuck/weekly-menu-card#readme",
+  "devDependencies": {},
+  "dependencies": {}
+} 
