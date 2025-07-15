@@ -1,7 +1,7 @@
 {
-  "name": "Weekly Menu Card",
+  "name": "Weekly Menu",
   "render_readme": true,
-  "domains": ["frontend"],
+  "domains": ["sensor"],
   "homeassistant": "2023.8.0",
   "iot_class": "Local Push"
 } 

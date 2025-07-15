@@ -1,13 +1,14 @@
-# Weekly Menu Card for Home Assistant
+# Weekly Menu for Home Assistant
 
-A beautiful, responsive card for Home Assistant that displays your weekly meal plan. Shows today's meal prominently and expands to show the full week when clicked.
+A Home Assistant integration that provides sensors for your weekly meal plan and includes a beautiful, responsive card to display the data. Shows today's meal prominently and expands to show the full week when clicked.
 
 ## Features
 
-- 🍽️ **Today's Meal**: Prominently displayed at the top
-- 📊 **Progress Bar**: Shows how many meals are planned for the week
-- 📱 **Expandable**: Click to see the full week's menu
-- 🔄 **Auto-refresh**: Updates every 5 minutes (configurable)
+- 🍽️ **Today's Meal Sensor**: Get today's meal as a sensor
+- 🍽️ **Tomorrow's Meal Sensor**: Get tomorrow's meal as a sensor  
+- 📊 **Progress Sensor**: Track meal planning progress
+- 🎨 **Custom Card**: Beautiful expandable card for dashboard display
+- 🔄 **Auto-refresh**: Updates every 5 minutes
 - 📱 **Responsive**: Works on mobile and desktop
 - 🎨 **Theme-aware**: Uses your Home Assistant theme colors
 
@@ -17,25 +18,15 @@ A beautiful, responsive card for Home Assistant that displays your weekly meal p
 
 1. Make sure you have [HACS](https://hacs.xyz/) installed
 2. Add this repository as a custom repository in HACS
-3. Search for "Weekly Menu Card" in the Frontend section
+3. Search for "Weekly Menu" in the Integrations section
 4. Click "Download"
 5. Restart Home Assistant
 
 ### Option 2: Manual Installation
 
-1. Download the `weekly_menu_card.js` file
-2. Place it in your `<config>/www/` folder
-3. Add the following to your `configuration.yaml`:
-
-```yaml
-lovelace:
-  mode: storage
-  resources:
-    - url: /local/weekly_menu_card.js
-      type: module
-```
-
-4. Restart Home Assistant
+1. Download the `custom_components/weekly_menu` folder
+2. Place it in your `<config>/custom_components/` folder
+3. Restart Home Assistant
 
 ## Configuration
 
@@ -45,7 +36,17 @@ lovelace:
 2. Go to Settings → Family Settings
 3. Copy your Family API Key
 
-### Add the Card
+### Add the Integration
+
+1. Go to **Settings** → **Devices & Services**
+2. Click **"+ ADD INTEGRATION"**
+3. Search for "Weekly Menu"
+4. Enter your configuration:
+   - **API URL**: `https://projects.lukedev.co.uk/menu/ha_api.php`
+   - **API Key**: Your family API key
+   - **Family ID**: `1` (or your family ID)
+
+### Add the Custom Card
 
 1. Go to your dashboard
 2. Click the three dots → "Edit Dashboard"
@@ -53,7 +54,7 @@ lovelace:
 4. Search for "Weekly Menu Card"
 5. Configure with your settings
 
-### Configuration Options
+### Card Configuration Options
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
@@ -63,7 +64,7 @@ lovelace:
 | `title` | string | `Weekly Menu` | Card title |
 | `refresh_interval` | number | `300` | Refresh interval in seconds (0 to disable) |
 
-### Example Configuration
+### Example Card Configuration
 
 ```yaml
 type: custom:weekly-menu-card
@@ -74,27 +75,47 @@ title: Weekly Menu
 refresh_interval: 300
 ```
 
-## Screenshots
+## Available Sensors
 
-![Card collapsed](https://raw.githubusercontent.com/HairyDuck/weekly-menu-card/main/images/card-collapsed.png)
-![Card expanded](https://raw.githubusercontent.com/HairyDuck/weekly-menu-card/main/images/card-expanded.png)
+After installation, you'll have these sensors available:
+
+- `sensor.todays_meal` - Today's planned meal
+- `sensor.tomorrows_meal` - Tomorrow's planned meal  
+- `sensor.meal_planning_progress` - Progress (e.g., "5/7 planned")
+
+## Example Dashboard
+
+```yaml
+type: entities
+title: Weekly Menu
+entities:
+  - entity: sensor.todays_meal
+    name: Today's Meal
+    icon: mdi:food
+  - entity: sensor.tomorrows_meal
+    name: Tomorrow's Meal
+    icon: mdi:food-variant
+  - entity: sensor.meal_planning_progress
+    name: Planning Progress
+    icon: mdi:calendar-check
+```
 
 ## Troubleshooting
 
+### Integration not showing up?
+- Check that the files are in the correct location: `<config>/custom_components/weekly_menu/`
+- Restart Home Assistant after installation
+- Check the logs for any errors
+
+### Sensors not updating?
+- Verify your API key is correct
+- Check that the API URL is accessible
+- Look at the sensor attributes for error details
+
 ### Card not loading?
-- Check your API key is correct
-- Verify the API URL is accessible
-- Check browser console for errors
-
-### No data showing?
-- Make sure you have meals planned in your menu system
-- Check that your family ID is correct
-- Verify the API is returning data by visiting the URL directly
-
-### Styling issues?
-- The card uses Home Assistant's CSS variables
-- It should automatically match your theme
-- If not, check your theme configuration
+- Make sure you've added the integration first
+- Check browser console for JavaScript errors
+- Verify the API is returning data
 
 ## Support
 
@@ -118,4 +139,4 @@ Created by [HairyDuck](https://github.com/HairyDuck)
 
 ---
 
-**Note**: This card requires a compatible menu system API. Make sure your menu system supports the required API endpoints. 
+**Note**: This integration requires a compatible menu system API. Make sure your menu system supports the required API endpoints. 

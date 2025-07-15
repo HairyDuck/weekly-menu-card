@@ -1,0 +1,10 @@
+{
+  "domain": "weekly_menu",
+  "name": "Weekly Menu",
+  "documentation": "https://github.com/HairyDuck/weekly-menu-card",
+  "dependencies": [],
+  "codeowners": ["@HairyDuck"],
+  "requirements": [],
+  "iot_class": "Local Push",
+  "version": "1.0.0"
+} 
