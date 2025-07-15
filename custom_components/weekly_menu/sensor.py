@@ -2,14 +2,16 @@
 from __future__ import annotations
 
 import logging
+import aiohttp
 from typing import Any
+from datetime import timedelta
 
-from homeassistant.components.rest import RestData
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, DEFAULT_API_URL
 
@@ -27,50 +29,82 @@ async def async_setup_entry(
     api_key = config["api_key"]
     family_id = config.get("family_id", 1)
     
-    # Create REST data object
-    rest = RestData(
-        hass,
-        "GET",
-        f"{api_url}?api_key={api_key}&family_id={family_id}",
-        None,
-        None,
-        None,
-        False,
-        10,
-    )
+    # Create coordinator
+    coordinator = WeeklyMenuCoordinator(hass, api_url, api_key, family_id)
     
     # Add sensors
     async_add_entities([
-        WeeklyMenuTodaySensor(rest, "Today's Meal", "today_meal"),
-        WeeklyMenuTomorrowSensor(rest, "Tomorrow's Meal", "tomorrow_meal"),
-        WeeklyMenuProgressSensor(rest, "Meal Planning Progress", "meal_progress"),
+        WeeklyMenuTodaySensor(coordinator, "Today's Meal", "today_meal"),
+        WeeklyMenuTomorrowSensor(coordinator, "Tomorrow's Meal", "tomorrow_meal"),
+        WeeklyMenuProgressSensor(coordinator, "Meal Planning Progress", "meal_progress"),
     ])
+
+
+class WeeklyMenuCoordinator(DataUpdateCoordinator):
+    """Class to manage fetching Weekly Menu data."""
+
+    def __init__(self, hass: HomeAssistant, api_url: str, api_key: str, family_id: int):
+        """Initialize."""
+        self.api_url = api_url
+        self.api_key = api_key
+        self.family_id = family_id
+        
+        super().__init__(
+            hass,
+            _LOGGER,
+            name="Weekly Menu",
+            update_interval=timedelta(minutes=5),
+        )
+
+    async def _async_update_data(self):
+        """Update data via API."""
+        try:
+            url = f"{self.api_url}?api_key={self.api_key}&family_id={self.family_id}"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get("success"):
+                            return data["data"]
+                        else:
+                            raise UpdateFailed(f"API error: {data.get('error', 'Unknown error')}")
+                    else:
+                        raise UpdateFailed(f"HTTP {response.status}")
+        except Exception as err:
+            raise UpdateFailed(f"Error fetching data: {err}")
 
 
 class WeeklyMenuBaseSensor(SensorEntity):
     """Base class for Weekly Menu sensors."""
 
-    def __init__(self, rest: RestData, name: str, unique_id: str) -> None:
+    def __init__(self, coordinator: WeeklyMenuCoordinator, name: str, unique_id: str) -> None:
         """Initialize the sensor."""
-        self._rest = rest
+        self.coordinator = coordinator
         self._attr_name = name
         self._attr_unique_id = f"weekly_menu_{unique_id}"
         self._attr_native_value = None
         self._attr_extra_state_attributes = {}
 
-    async def async_update(self) -> None:
-        """Update the sensor."""
-        await self._rest.async_update()
-        
-        if self._rest.data is None:
-            return
-            
-        try:
-            data = self._rest.json_data()
-            if data and data.get("success"):
-                self._update_from_data(data["data"])
-        except Exception as err:
-            _LOGGER.error("Error updating Weekly Menu sensor: %s", err)
+    @property
+    def available(self):
+        """Return True if entity is available."""
+        return self.coordinator.last_update_success
+
+    async def async_added_to_hass(self):
+        """When entity is added to hass."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self._handle_coordinator_update)
+        )
+
+    def _handle_coordinator_update(self):
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        """No need to poll. Coordinator notifies entity of updates."""
+        return False
 
     def _update_from_data(self, data: dict[str, Any]) -> None:
         """Update sensor from API data."""
@@ -90,6 +124,20 @@ class WeeklyMenuTodaySensor(WeeklyMenuBaseSensor):
             "last_updated": data.get("last_updated", "")
         }
 
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        if self.coordinator.data:
+            self._update_from_data(self.coordinator.data)
+        return self._attr_native_value
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        if self.coordinator.data:
+            self._update_from_data(self.coordinator.data)
+        return self._attr_extra_state_attributes
+
 
 class WeeklyMenuTomorrowSensor(WeeklyMenuBaseSensor):
     """Sensor for tomorrow's meal."""
@@ -102,6 +150,20 @@ class WeeklyMenuTomorrowSensor(WeeklyMenuBaseSensor):
             "day": tomorrow_data.get("day", ""),
             "last_updated": data.get("last_updated", "")
         }
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        if self.coordinator.data:
+            self._update_from_data(self.coordinator.data)
+        return self._attr_native_value
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        if self.coordinator.data:
+            self._update_from_data(self.coordinator.data)
+        return self._attr_extra_state_attributes
 
 
 class WeeklyMenuProgressSensor(WeeklyMenuBaseSensor):
@@ -119,4 +181,18 @@ class WeeklyMenuProgressSensor(WeeklyMenuBaseSensor):
             "total_days": total,
             "unplanned_meals": summary.get("unplanned_meals", 0),
             "last_updated": data.get("last_updated", "")
-        } 
+        }
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        if self.coordinator.data:
+            self._update_from_data(self.coordinator.data)
+        return self._attr_native_value
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        if self.coordinator.data:
+            self._update_from_data(self.coordinator.data)
+        return self._attr_extra_state_attributes 

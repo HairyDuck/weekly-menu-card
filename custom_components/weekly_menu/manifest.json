@@ -4,7 +4,8 @@
   "documentation": "https://github.com/HairyDuck/weekly-menu-card",
   "dependencies": [],
   "codeowners": ["@HairyDuck"],
-  "requirements": [],
+  "requirements": ["aiohttp"],
   "iot_class": "Local Push",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "config_flow": true
 } 
